@@ -64,6 +64,19 @@ impl LmsResponse {
     }
 
     #[allow(dead_code)]
+    pub fn get_f64(&self, key: &str) -> Result<f64, String> {
+        if let Some(value) = self.result.get(key) {
+            if value.is_f64() {
+                Ok(value.as_f64().unwrap())
+            } else {
+                Err(format!("'{}' is not a f64!", key))
+            }
+        } else {
+            Err(format!("'{}' does not exist!", key))
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn get_str(&self, key: &str) -> Result<String, String> {
         if let Some(value) = self.result.get(key) {
             if value.is_string() {
@@ -112,6 +125,42 @@ impl LmsResponse {
 pub struct LmsPlayer {
     pub name: String,
     pub playerid: String,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum PlaylistMode {
+    STOP,
+    PLAY,
+    PAUSE,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum RepeatMode {
+    NONE,
+    TRACK,
+    PLAYLIST,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum ShuffleMode {
+    NONE,
+    TRACK,
+    ALBUM,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct LmsStatus {
+    pub player_name: String,
+    pub playlist_index: u64,
+    pub playlist_repeat: RepeatMode,
+    pub playlist_shuffle: ShuffleMode,
+    pub playlist_mode: PlaylistMode,
+    pub total_tracks: u64,
+    pub elapsed_duration: f64,
 }
 
 #[derive(Debug, Deserialize)]
