@@ -44,13 +44,6 @@ pub struct LmsResponse {
 }
 
 impl LmsResponse {
-    // NOTE: Used for debugging only
-    #[allow(dead_code)]
-    pub fn dump(&self) {
-        println!("{:?}", self.result);
-    }
-
-    #[allow(dead_code)]
     pub fn get_u64(&self, key: &str) -> Result<u64, String> {
         if let Some(value) = self.result.get(key) {
             if value.is_u64() {
@@ -63,7 +56,6 @@ impl LmsResponse {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_f64(&self, key: &str) -> Result<f64, String> {
         if let Some(value) = self.result.get(key) {
             if value.is_f64() {
@@ -76,7 +68,6 @@ impl LmsResponse {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_str(&self, key: &str) -> Result<String, String> {
         if let Some(value) = self.result.get(key) {
             if value.is_string() {
@@ -103,22 +94,6 @@ impl LmsResponse {
             Err(format!("'{}' does not exist!", key))
         }
     }
-
-    #[allow(dead_code)]
-    pub fn get_object(
-        &self,
-        key: &str
-    ) -> Result<&serde_json::Map<String, serde_json::Value>, String> {
-        if let Some(value) = self.result.get(key) {
-            if value.is_object() {
-                Ok(value.as_object().unwrap())
-            } else {
-                Err(format!("'{}' is not an object!", key))
-            }
-        } else {
-            Err(format!("'{}' does not exist!", key))
-        }
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -127,32 +102,28 @@ pub struct LmsPlayer {
     pub playerid: String,
 }
 
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub enum PlaylistMode {
     STOP,
     PLAY,
     PAUSE,
 }
 
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub enum RepeatMode {
     NONE,
     TRACK,
     PLAYLIST,
 }
 
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub enum ShuffleMode {
     NONE,
     TRACK,
     ALBUM,
 }
 
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub struct LmsStatus {
     pub player_name: String,
     pub playlist_index: u64,
@@ -163,7 +134,7 @@ pub struct LmsStatus {
     pub elapsed_duration: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct LmsPlaylist {
     pub tracks: Vec<LmsSong>,
 }
@@ -174,7 +145,7 @@ impl LmsPlaylist {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct LmsSong {
     #[serde(rename = "playlist index")]
     pub index: u64,
