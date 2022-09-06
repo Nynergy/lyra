@@ -154,3 +154,15 @@ pub struct LmsSong {
     pub album: String,
     pub duration: f64,
 }
+
+impl LmsSong {
+    pub fn default() -> Self {
+        Self {
+            index: 0,
+            title: String::new(),
+            artist: String::new(),
+            album: String::new(),
+            duration: 0.1,
+        }
+    }
+}

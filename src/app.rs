@@ -75,8 +75,9 @@ impl App {
                 .json::<LmsResponse>()
                 .await?;
 
+            let empty = Vec::new();
             let playlist_loop = res.get_array("playlist_loop")
-                .expect("Could not extract value");
+                .unwrap_or(&empty);
             let mut playlist: Vec<LmsSong> = Vec::new();
             for track in playlist_loop.iter() {
                 playlist.push(

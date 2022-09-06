@@ -39,7 +39,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     if let Some(status) = &app.status {
         let left = Spans::from(vec![
             Span::styled(
-                "Connected: ",
+                "Player: ",
                 Style::default().add_modifier(Modifier::BOLD)
             ),
             Span::styled(
@@ -197,7 +197,13 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                 .split(chunks[2]);
 
             let index = status.playlist_index as usize;
-            let current_track = playlist.tracks[index].clone();
+            let current_track: LmsSong;
+
+            if status.total_tracks != 0 {
+                current_track = playlist.tracks[index].clone();
+            } else {
+                current_track = LmsSong::default();
+            }
             let elapsed = status.elapsed_duration;
 
             let mut bar = String::from(line::VERTICAL_RIGHT);
@@ -239,11 +245,18 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 
             f.render_widget(playbar, playbar_chunk);
 
-            let mut now_playing = format!(
-                "Now Playing: {} - {}",
-                current_track.title,
-                current_track.artist
-            );
+            let mut now_playing: String;
+
+            if status.total_tracks != 0 {
+                now_playing = format!(
+                    "Now Playing: {} - {}",
+                    current_track.title,
+                    current_track.artist
+                );
+            } else {
+                now_playing = "Now Playing: N/A".to_string();
+            }
+
             let max_length = chunks[3].width as usize - 25;
             if now_playing.len() > max_length {
                 now_playing.truncate(max_length);
