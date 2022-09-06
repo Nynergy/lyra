@@ -6,9 +6,10 @@ use tui::{
         Direction,
         Layout
     },
+    style::{Color, Style},
     symbols::line,
     text::{Span, Spans},
-    widgets::{Block, Paragraph},
+    widgets::{Block, Gauge, Paragraph},
     Frame,
 };
 
@@ -28,6 +29,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         )
         .split(f.size());
 
+    // Status
     if let Some(status) = &app.status {
         let left = Spans::from(vec![
             Span::raw("Connected: "),
@@ -109,6 +111,102 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
             .block(Block::default());
 
         f.render_widget(bar, chunks[0]);
+    }
+
+    // Playbar
+    if let Some(playlist) = &app.playlist {
+        if let Some(status) = &app.status {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(
+                    [
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                    ]
+                    .as_ref()
+                )
+                .split(chunks[2]);
+
+            let index = status.playlist_index as usize;
+            let current_track = playlist.tracks[index].clone();
+            let elapsed = status.elapsed_duration;
+
+            let mut bar = String::from(line::VERTICAL_RIGHT);
+            for _ in 0..chunks[2].width - 2 {
+                bar.push_str(line::HORIZONTAL);
+            }
+            bar.push_str(line::VERTICAL_LEFT);
+
+            let bar = Spans::from(vec![
+                Span::raw(bar),
+            ]);
+
+            let bar = Paragraph::new(bar)
+                .block(Block::default());
+
+            f.render_widget(bar.clone(), chunks[0]);
+            f.render_widget(bar, chunks[2]);
+
+            let playbar_chunk = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(
+                    [
+                        Constraint::Length(1),
+                        Constraint::Min(1),
+                        Constraint::Length(1),
+                    ]
+                    .as_ref()
+                )
+                .split(chunks[1])[1];
+
+            let playbar = Gauge::default()
+                .block(Block::default())
+                .gauge_style(
+                    Style::default()
+                    .fg(Color::Green)
+                )
+                .ratio(elapsed / current_track.duration)
+                .label("");
+
+            f.render_widget(playbar, playbar_chunk);
+
+            let mut now_playing = format!(
+                "Now Playing: {} - {}",
+                current_track.title,
+                current_track.artist
+            );
+            let max_length = chunks[3].width as usize / 3 * 2;
+            if now_playing.len() > max_length {
+                now_playing.truncate(max_length);
+                now_playing = format!("{}...", now_playing);
+            }
+            let left = Spans::from(vec![
+                Span::raw(now_playing),
+            ]);
+
+            let left = Paragraph::new(left)
+                .block(Block::default());
+
+            f.render_widget(left, chunks[3]);
+
+            let elapsed = format_time(elapsed);
+            let duration = format_time(current_track.duration);
+            let right = Spans::from(vec![
+                Span::raw("("),
+                Span::raw(elapsed),
+                Span::raw("/"),
+                Span::raw(duration),
+                Span::raw(")"),
+            ]);
+
+            let right = Paragraph::new(right)
+                .block(Block::default())
+                .alignment(Alignment::Right);
+
+            f.render_widget(right, chunks[3]);
+        }
     }
 }
 
