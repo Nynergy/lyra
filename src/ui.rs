@@ -305,30 +305,45 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
 
     let mut artist_spaces = String::new();
     let artist_width = width as usize / 4;
-    let spaces = std::cmp::max(artist_width - track.artist.len(), 1);
+    let width_in_unicode = track.artist.chars()
+        .map(|c| {
+            if c.is_ascii() { 1 } else { 2 }
+        })
+        .sum::<usize>();
+    let spaces = std::cmp::max(artist_width - width_in_unicode, 1);
     for _ in 0..spaces {
         artist_spaces.push_str(" ");
     }
     let mut artist = track.artist.clone();
     artist.truncate(artist_width);
-    current_width += artist.len() + artist_spaces.len();
+    current_width += artist.chars().count() + artist_spaces.len();
 
     let mut album_spaces = String::new();
     let album_width = width as usize / 4;
-    let spaces = std::cmp::max(album_width - track.album.len(), 1);
+    let width_in_unicode = track.album.chars()
+        .map(|c| {
+            if c.is_ascii() { 1 } else { 2 }
+        })
+        .sum::<usize>();
+    let spaces = std::cmp::max(album_width - width_in_unicode, 1);
     for _ in 0..spaces {
         album_spaces.push_str(" ");
     }
     let mut album = track.album.clone();
     album.truncate(album_width);
-    current_width += album.len() + album_spaces.len();
+    current_width += album.chars().count() + album_spaces.len();
 
     let duration = format_time(track.duration);
     current_width += duration.len();
 
     let mut title_spaces = String::new();
     let title_width = width as usize - current_width;
-    let spaces = title_width.checked_sub(track.title.len())
+    let width_in_unicode = track.title.chars()
+        .map(|c| {
+            if c.is_ascii() { 1 } else { 2 }
+        })
+        .sum::<usize>();
+    let spaces = title_width.checked_sub(width_in_unicode)
         .unwrap_or_else(|| { 1 });
     for _ in 0..spaces {
         title_spaces.push_str(" ");
