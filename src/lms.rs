@@ -102,7 +102,7 @@ pub struct LmsPlayer {
     pub playerid: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PlaylistMode {
     STOP,
     PLAY,

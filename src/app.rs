@@ -1,3 +1,5 @@
+use tui::widgets::ListState;
+
 use crate::lms::*;
 
 pub struct App {
@@ -5,6 +7,7 @@ pub struct App {
     pub player: Option<LmsPlayer>,
     pub playlist: Option<LmsPlaylist>,
     pub status: Option<LmsStatus>,
+    pub playlist_state: ListState,
 }
 
 impl App {
@@ -16,6 +19,7 @@ impl App {
             player: None,
             playlist: None,
             status: None,
+            playlist_state: ListState::default(),
         }
     }
 
@@ -23,6 +27,7 @@ impl App {
         self.get_player().await?;
         self.get_current_status().await?;
         self.get_current_playlist().await?;
+        self.update_state();
 
         Ok(())
     }
@@ -154,6 +159,8 @@ impl App {
             let elapsed_duration: f64;
             if total_tracks == 0 {
                 elapsed_duration = 0.0;
+            } else if playlist_mode == PlaylistMode::STOP {
+                elapsed_duration = 0.0;
             } else {
                 elapsed_duration = res.get_f64("_time")
                     .expect("Could not extract value");
@@ -173,5 +180,18 @@ impl App {
         }
 
         Ok(())
+    }
+
+    fn update_state(&mut self) {
+        if let Some(status) = &self.status {
+            if status.total_tracks == 0 {
+                self.playlist_state.select(None);
+            } else {
+                let index = status.playlist_index as usize;
+                self.playlist_state.select(Some(index));
+            }
+        } else {
+            self.playlist_state.select(None);
+        }
     }
 }

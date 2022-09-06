@@ -6,17 +6,23 @@ use tui::{
         Direction,
         Layout
     },
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     symbols::line,
     text::{Span, Spans},
-    widgets::{Block, Gauge, Paragraph},
+    widgets::{
+        Block,
+        Gauge,
+        List,
+        ListItem,
+        Paragraph
+    },
     Frame,
 };
 
 use crate::app::*;
 use crate::lms::*;
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
+pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -111,6 +117,26 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
             .block(Block::default());
 
         f.render_widget(bar, chunks[0]);
+    }
+
+    // Playlist
+    if let Some(playlist) = &app.playlist {
+        let items: Vec<ListItem> = playlist
+            .tracks
+            .iter()
+            .map(|i| {
+                ListItem::new(track_span(i, chunks[1].width))
+            })
+            .collect();
+
+        let list = List::new(items)
+            .block(Block::default())
+            .highlight_style(
+                Style::default()
+                .add_modifier(Modifier::REVERSED)
+            );
+
+        f.render_stateful_widget(list, chunks[1], &mut app.playlist_state);
     }
 
     // Playbar
@@ -224,4 +250,57 @@ fn format_time(duration: f64) -> String {
     }
 
     time_str
+}
+
+fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
+    let index = format!("{:2}", track.index);
+    let index_spaces = " ";
+    let mut current_width = index.len() + index_spaces.len();
+
+    let mut artist_spaces = String::new();
+    let artist_width = width as usize / 11 * 3;
+    let spaces = std::cmp::max(artist_width - track.artist.len(), 1);
+    for _ in 0..spaces {
+        artist_spaces.push_str(" ");
+    }
+    let mut artist = track.artist.clone();
+    artist.truncate(artist_width);
+    current_width += artist.len() + artist_spaces.len();
+
+    let mut album_spaces = String::new();
+    let album_width = width as usize / 11 * 3;
+    let spaces = std::cmp::max(album_width - track.album.len(), 1);
+    for _ in 0..spaces {
+        album_spaces.push_str(" ");
+    }
+    let mut album = track.album.clone();
+    album.truncate(album_width);
+    current_width += album.len() + album_spaces.len();
+
+    let duration = format_time(track.duration);
+    current_width += duration.len();
+
+    let mut title_spaces = String::new();
+    let title_width = width as usize - current_width;
+    let spaces = title_width.checked_sub(track.title.len())
+        .unwrap_or_else(|| { 1 });
+    for _ in 0..spaces {
+        title_spaces.push_str(" ");
+    }
+    let mut title = track.title.clone();
+    title.truncate(title_width);
+    if spaces == 1 { title.truncate(title_width - 1); }
+
+
+    Spans::from(vec![
+        Span::raw(index),
+        Span::raw(index_spaces),
+        Span::raw(title),
+        Span::raw(title_spaces),
+        Span::raw(artist),
+        Span::raw(artist_spaces),
+        Span::raw(album),
+        Span::raw(album_spaces),
+        Span::raw(duration),
+    ])
 }

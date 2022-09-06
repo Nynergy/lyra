@@ -49,9 +49,11 @@ async fn run_app<B: Backend>(
     mut app: App,
     tick_rate: Duration,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    app.on_tick().await?;
     let mut last_tick = Instant::now();
+
     loop {
-        terminal.draw(|f| ui(f, &app))?;
+        terminal.draw(|f| ui(f, &mut app))?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
