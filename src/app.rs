@@ -114,7 +114,10 @@ impl App {
                 playlist_index = 0;
             } else {
                 playlist_index = res.get_str("playlist_cur_index")
-                    .expect("Could not extract value")
+                    .unwrap_or_else(|_| {
+                        format!("{}", res.get_u64("playlist_cur_index")
+                            .expect("Could not extract value"))
+                    })
                     .parse::<u64>()
                     .expect("Playlist index is not a u64");
             }

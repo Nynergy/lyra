@@ -38,8 +38,14 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     // Status
     if let Some(status) = &app.status {
         let left = Spans::from(vec![
-            Span::raw("Connected: "),
-            Span::raw(&status.player_name),
+            Span::styled(
+                "Connected: ",
+                Style::default().add_modifier(Modifier::BOLD)
+            ),
+            Span::styled(
+                &status.player_name,
+                Style::default().fg(Color::Red)
+            ),
         ]);
 
         let left = Paragraph::new(left)
@@ -57,9 +63,15 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         let playlist_duration = format_time(playlist_duration);
 
         let center = Spans::from(vec![
-            Span::raw(num_tracks),
+            Span::styled(
+                num_tracks,
+                Style::default().add_modifier(Modifier::BOLD)
+            ),
             Span::raw(" | "),
-            Span::raw(playlist_duration),
+            Span::styled(
+                playlist_duration,
+                Style::default().add_modifier(Modifier::BOLD)
+            ),
         ]);
 
         let center = Paragraph::new(center)
@@ -84,11 +96,40 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             ShuffleMode::ALBUM => "Z",
         };
 
+        let mode_color = match status.playlist_mode {
+            PlaylistMode::STOP => Color::Red,
+            PlaylistMode::PLAY => Color::Green,
+            PlaylistMode::PAUSE => Color::Yellow,
+        };
+        let repeat_color = match status.playlist_repeat {
+            RepeatMode::NONE => Color::White,
+            _ => Color::Magenta,
+        };
+        let shuffle_color = match status.playlist_shuffle {
+            ShuffleMode::NONE => Color::White,
+            _ => Color::Cyan,
+        };
+
         let right = Spans::from(vec![
-            Span::raw(playback),
+            Span::styled(
+                playback,
+                Style::default()
+                .fg(mode_color)
+                .add_modifier(Modifier::BOLD)
+            ),
             Span::raw(" | ["),
-            Span::raw(repeat),
-            Span::raw(shuffle),
+            Span::styled(
+                repeat,
+                Style::default()
+                .fg(repeat_color)
+                .add_modifier(Modifier::BOLD)
+            ),
+            Span::styled(
+                shuffle,
+                Style::default()
+                .fg(shuffle_color)
+                .add_modifier(Modifier::BOLD)
+            ),
             Span::raw("]"),
         ]);
 
@@ -203,13 +244,18 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                 current_track.title,
                 current_track.artist
             );
-            let max_length = chunks[3].width as usize / 3 * 2;
+            let max_length = chunks[3].width as usize - 25;
             if now_playing.len() > max_length {
                 now_playing.truncate(max_length);
                 now_playing = format!("{}...", now_playing);
             }
+            let now_playing: Vec<&str> = now_playing.split(":").collect();
             let left = Spans::from(vec![
-                Span::raw(now_playing),
+                Span::styled(
+                    format!("{}:", now_playing[0]),
+                    Style::default().add_modifier(Modifier::BOLD)
+                ),
+                Span::raw(now_playing[1]),
             ]);
 
             let left = Paragraph::new(left)
@@ -253,12 +299,12 @@ fn format_time(duration: f64) -> String {
 }
 
 fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
-    let index = format!("{:2}", track.index);
+    let index = format!("{:2}", track.index + 1);
     let index_spaces = " ";
     let mut current_width = index.len() + index_spaces.len();
 
     let mut artist_spaces = String::new();
-    let artist_width = width as usize / 11 * 3;
+    let artist_width = width as usize / 4;
     let spaces = std::cmp::max(artist_width - track.artist.len(), 1);
     for _ in 0..spaces {
         artist_spaces.push_str(" ");
@@ -268,7 +314,7 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
     current_width += artist.len() + artist_spaces.len();
 
     let mut album_spaces = String::new();
-    let album_width = width as usize / 11 * 3;
+    let album_width = width as usize / 4;
     let spaces = std::cmp::max(album_width - track.album.len(), 1);
     for _ in 0..spaces {
         album_spaces.push_str(" ");
@@ -293,14 +339,41 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
 
 
     Spans::from(vec![
-        Span::raw(index),
-        Span::raw(index_spaces),
-        Span::raw(title),
-        Span::raw(title_spaces),
-        Span::raw(artist),
-        Span::raw(artist_spaces),
-        Span::raw(album),
-        Span::raw(album_spaces),
-        Span::raw(duration),
+        Span::styled(
+            index,
+            Style::default().fg(Color::Magenta)
+        ),
+        Span::styled(
+            index_spaces,
+            Style::default().fg(Color::Magenta)
+        ),
+        Span::styled(
+            title,
+            Style::default().fg(Color::Yellow)
+        ),
+        Span::styled(
+            title_spaces,
+            Style::default().fg(Color::Yellow)
+        ),
+        Span::styled(
+            artist,
+            Style::default().fg(Color::Blue)
+        ),
+        Span::styled(
+            artist_spaces,
+            Style::default().fg(Color::Blue)
+        ),
+        Span::styled(
+            album,
+            Style::default().fg(Color::Red)
+        ),
+        Span::styled(
+            album_spaces,
+            Style::default().fg(Color::Red)
+        ),
+        Span::styled(
+            duration,
+            Style::default().fg(Color::Cyan)
+        ),
     ])
 }
