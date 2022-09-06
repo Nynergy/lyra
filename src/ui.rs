@@ -303,35 +303,42 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
     let index_spaces = " ";
     let mut current_width = index.len() + index_spaces.len();
 
+    let mut artist = String::new();
     let mut artist_spaces = String::new();
-    let artist_width = width as usize / 4;
-    let width_in_unicode = track.artist.chars()
-        .map(|c| {
-            if c.is_ascii() { 1 } else { 2 }
-        })
-        .sum::<usize>();
-    let spaces = std::cmp::max(artist_width - width_in_unicode, 1);
-    for _ in 0..spaces {
-        artist_spaces.push_str(" ");
+    if width > 50 {
+        artist_spaces = String::new();
+        let artist_width = width as usize / 4;
+        let width_in_unicode = track.artist.chars()
+            .map(|c| {
+                if c.is_ascii() { 1 } else { 2 }
+            })
+            .sum::<usize>();
+        let spaces = std::cmp::max(artist_width - width_in_unicode, 1);
+        for _ in 0..spaces {
+            artist_spaces.push_str(" ");
+        }
+        artist = track.artist.clone();
+        artist.truncate(artist_width);
+        current_width += artist.chars().count() + artist_spaces.len();
     }
-    let mut artist = track.artist.clone();
-    artist.truncate(artist_width);
-    current_width += artist.chars().count() + artist_spaces.len();
 
+    let mut album = String::new();
     let mut album_spaces = String::new();
-    let album_width = width as usize / 4;
-    let width_in_unicode = track.album.chars()
-        .map(|c| {
-            if c.is_ascii() { 1 } else { 2 }
-        })
-        .sum::<usize>();
-    let spaces = std::cmp::max(album_width - width_in_unicode, 1);
-    for _ in 0..spaces {
-        album_spaces.push_str(" ");
+    if width > 80 {
+        let album_width = width as usize / 4;
+        let width_in_unicode = track.album.chars()
+            .map(|c| {
+                if c.is_ascii() { 1 } else { 2 }
+            })
+            .sum::<usize>();
+        let spaces = std::cmp::max(album_width - width_in_unicode, 1);
+        for _ in 0..spaces {
+            album_spaces.push_str(" ");
+        }
+        album = track.album.clone();
+        album.truncate(album_width);
+        current_width += album.chars().count() + album_spaces.len();
     }
-    let mut album = track.album.clone();
-    album.truncate(album_width);
-    current_width += album.chars().count() + album_spaces.len();
 
     let duration = format_time(track.duration);
     current_width += duration.len();
