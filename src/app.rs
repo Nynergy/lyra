@@ -167,7 +167,10 @@ impl App {
                 elapsed_duration = 0.0;
             } else {
                 elapsed_duration = res.get_f64("_time")
-                    .expect("Could not extract value");
+                    .unwrap_or_else(|_| {
+                        res.get_u64("_time")
+                            .expect("Could not extract value") as f64
+                    });
             }
 
             self.status = Some(LmsStatus {

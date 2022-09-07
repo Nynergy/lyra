@@ -258,10 +258,15 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                 now_playing = "Now Playing: N/A".to_string();
             }
 
-            let max_length = chunks[3].width as usize - 25;
-            if now_playing.len() > max_length {
-                now_playing.truncate(max_length);
-                now_playing = format!("{}...", now_playing);
+            let max_length = chunks[3].width as usize - 20;
+            let width_in_unicode = now_playing.chars()
+                .map(|c| {
+                    if c.is_ascii() { 1 } else { 2 }
+                })
+                .sum::<usize>();
+            if width_in_unicode > max_length {
+                let (now_playing_str, _) = now_playing.unicode_truncate(max_length);
+                now_playing = format!("{}...", now_playing_str);
             }
             let now_playing: Vec<&str> = now_playing.split(":").collect();
             let left = Spans::from(vec![
@@ -305,8 +310,8 @@ fn format_time(duration: f64, full_width: bool) -> String {
         let hours = minutes / 60;
         let minutes = minutes % 60;
         time_str = match full_width {
-            true => format!("{:2}:{:02}{:02}", hours, minutes, seconds),
-            false => format!("{}:{:02}{:02}", hours, minutes, seconds),
+            true => format!("{:2}:{:02}:{:02}", hours, minutes, seconds),
+            false => format!("{}:{:02}:{:02}", hours, minutes, seconds),
         };
     } else {
         time_str = match full_width {
@@ -323,10 +328,19 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
     let index_spaces = " ";
     let mut current_width = index.len() + index_spaces.len();
 
+    let artist_width_limit = 50;
+    let album_width_limit = 80;
+    let mut width_factor = width as usize / 4;
+    if width > album_width_limit {
+        width_factor = width as usize / 11 * 3;
+    } else if width > artist_width_limit {
+        width_factor = width as usize / 3;
+    }
+
     let mut artist = String::new();
     let mut artist_spaces = String::new();
-    if width > 50 {
-        let artist_width = (width as usize / 4) - 1;
+    if width > artist_width_limit {
+        let artist_width = width_factor - 1;
         let width_in_unicode = track.artist.chars()
             .map(|c| {
                 if c.is_ascii() { 1 } else { 2 }
@@ -348,8 +362,8 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
 
     let mut album = String::new();
     let mut album_spaces = String::new();
-    if width > 80 {
-        let album_width = (width as usize / 4) - 1;
+    if width > album_width_limit {
+        let album_width = width_factor - 1;
         let width_in_unicode = track.album.chars()
             .map(|c| {
                 if c.is_ascii() { 1 } else { 2 }
