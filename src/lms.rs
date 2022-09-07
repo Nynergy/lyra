@@ -12,7 +12,10 @@ pub struct LmsClient {
 impl LmsClient {
     pub fn from(socket_str: String) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(core::time::Duration::from_millis(3000))
+                .build()
+                .expect("Could not build reqwest client"),
             socket: socket_str.parse()
                 .expect("Unable to parse socket address"),
         }
