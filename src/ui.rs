@@ -1,10 +1,12 @@
 use tui::{
-    backend::{Backend},
+    backend::Backend,
+    buffer::Buffer,
     layout::{
         Alignment,
         Constraint,
         Direction,
         Layout,
+        Margin,
         Rect,
     },
     style::{Color, Modifier, Style},
@@ -15,7 +17,9 @@ use tui::{
         Gauge,
         List,
         ListItem,
-        Paragraph
+        Paragraph,
+        Widget,
+        Wrap
     },
     Frame,
 };
@@ -24,7 +28,192 @@ use unicode_truncate::UnicodeTruncateStr;
 use crate::app::*;
 use crate::lms::*;
 
+macro_rules! raw_para {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_para = Vec::new();
+            $(
+                temp_para.push(
+                    Spans::from(
+                        Span::raw($x)
+                    )
+                );
+            )*
+            temp_para
+        }
+    };
+}
+
+struct CustomBorder {
+    title: String,
+    title_style: Style,
+    border_style: Style,
+}
+
+impl CustomBorder {
+    fn new() -> Self {
+        Self {
+            title: "".to_string(),
+            title_style: Style::default(),
+            border_style: Style::default(),
+        }
+    }
+
+    fn title(mut self, title: String) -> Self {
+        self.title = title;
+        self
+    }
+}
+
+impl Widget for CustomBorder {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        // Border Lines
+        let mut line = String::new();
+        line.push_str(line::VERTICAL_RIGHT);
+        for _ in 0..area.width - 2 {
+            line.push_str(line::HORIZONTAL);
+        }
+        line.push_str(line::VERTICAL_LEFT);
+        buf.set_string(area.left(), area.top(), line.clone(), self.border_style);
+        buf.set_string(area.left(), area.bottom() - 1, line, self.border_style);
+
+        // Title
+        let offset = area.width / 2 - self.title.len() as u16 / 2;
+        let title_x = area.left() + offset;
+        let title_y = area.y;
+        buf.set_string(title_x, title_y, self.title.clone(), self.title_style);
+
+        // Title Tee's
+        buf.set_string(
+            title_x - 1,
+            area.top(),
+            line::VERTICAL_LEFT,
+            self.border_style
+        );
+        buf.set_string(
+            title_x + self.title.len() as u16,
+            area.top(),
+            line::VERTICAL_RIGHT,
+            self.border_style
+        );
+    }
+}
+
 pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+    match app.state {
+        AppState::PlayerMenu => render_player_menu_state(f, app),
+        AppState::Playlist => render_playlist_state(f, app),
+    }
+}
+
+fn render_player_menu_state<B: Backend>(
+    f: &mut Frame<B>,
+    app: &mut App
+) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+            Constraint::Length(9),
+            Constraint::Length(1),
+            Constraint::Min(1),
+            Constraint::Length(1),
+            Constraint::Length(3),
+            ]
+            .as_ref()
+        )
+        .split(f.size());
+
+    let banner = raw_para!(
+        "",
+        "    __                ",
+        "   / /_  ___________ _",
+        "  / / / / / ___/ __ `/",
+        " / / /_/ / /  / /_/ / ",
+        "/_/\\__, /_/   \\__,_/  ",
+        "  /____/              ",
+        "",
+        "An LMS Playlist Viewer for the Terminal",
+        ""
+    );
+
+    let banner = Paragraph::new(banner)
+        .block(Block::default())
+        .style(
+            Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
+        )
+        .alignment(Alignment::Center);
+
+    f.render_widget(banner, chunks[0]);
+
+    let list_area = centered_rect(40, 100, chunks[2]);
+
+    if app.player_list.is_empty() {
+        let mut commands = raw_para!(
+            "There are currently no connected players."
+        );
+
+        for _ in 0..chunks[2].height / 2 - 2 {
+            commands.insert(0, Spans::from(Span::raw("")));
+        }
+
+        let commands = Paragraph::new(commands)
+            .block(Block::default())
+            .style(
+                Style::default()
+                .add_modifier(Modifier::BOLD)
+            )
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+
+        f.render_widget(commands, chunks[2]);
+    } else {
+        let highlight = Style::default()
+            .add_modifier(Modifier::REVERSED);
+
+        let container = CustomBorder::new()
+            .title("Players".to_string());
+
+        f.render_widget(container, list_area);
+
+        let list_area = shrink_rect(list_area, 1);
+
+        let items: Vec<ListItem> = app.player_list
+            .players
+            .iter()
+            .map(|p| {
+                ListItem::new(
+                    Span::raw(p.name.clone())
+                )
+            })
+            .collect();
+
+        let list = List::new(items)
+            .block(Block::default())
+            .highlight_style(highlight);
+
+        f.render_stateful_widget(
+            list,
+            list_area,
+            &mut app.player_list.state
+        );
+    }
+
+    let info = raw_para!(
+        "",
+        "lyra v1.0.0 by Ben Buchanan (https://github.com/Nynergy)"
+    );
+
+    let info = Paragraph::new(info)
+        .block(Block::default())
+        .alignment(Alignment::Center);
+
+    f.render_widget(info, chunks[4]);
+}
+
+fn render_playlist_state<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -513,4 +702,37 @@ fn construct_text_column(
     current_width += new_width + num_spaces;
 
     (text, spaces, current_width)
+}
+
+fn centered_rect(percent_x: usize, percent_y: usize, size: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) as u16 / 2),
+                Constraint::Percentage(percent_y as u16),
+                Constraint::Percentage((100 - percent_y) as u16 / 2),
+            ]
+            .as_ref(),
+        )
+        .split(size);
+
+    let popup_rect = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) as u16 / 2),
+                Constraint::Percentage(percent_x as u16),
+                Constraint::Percentage((100 - percent_x) as u16 / 2),
+            ]
+            .as_ref(),
+        )
+        .split(popup_layout[1])[1];
+
+    popup_rect
+}
+
+fn shrink_rect(rect: Rect, amount: u16) -> Rect {
+    let margin = Margin { vertical: amount, horizontal: amount };
+    rect.inner(&margin)
 }

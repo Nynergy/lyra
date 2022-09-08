@@ -6,12 +6,41 @@ use crate::lms::*;
 type ReqResult<T> = Result<T, reqwest::Error>;
 type JsonValue = serde_json::Value;
 
+pub struct PlayerList {
+    pub players: Vec<LmsPlayer>,
+    pub state: ListState,
+}
+
+impl PlayerList {
+    fn default() -> Self {
+        let mut state = ListState::default();
+        state.select(Some(0));
+
+        Self {
+            players: Vec::new(),
+            state
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.players.is_empty()
+    }
+}
+
+pub enum AppState {
+    PlayerMenu,
+    Playlist
+}
+
 pub struct App {
     client: LmsClient,
+    pub state: AppState,
+    pub quit: bool,
     pub player: Option<LmsPlayer>,
     pub playlist: Option<LmsPlaylist>,
     pub status: Option<LmsStatus>,
     pub playlist_state: ListState,
+    pub player_list: PlayerList,
 }
 
 impl App {
@@ -20,15 +49,47 @@ impl App {
 
         Self {
             client,
+            state: AppState::PlayerMenu,
+            quit: false,
             player: None,
             playlist: None,
             status: None,
             playlist_state: ListState::default(),
+            player_list: PlayerList::default(),
         }
     }
 
-    pub async fn on_tick(&mut self) -> ReqResult<()>{
-        self.get_player().await?;
+    pub async fn on_tick(&mut self) -> ReqResult<()> {
+        match self.state {
+            AppState::PlayerMenu => self.update_player_list().await?,
+            AppState::Playlist => self.update_playlist_info().await?,
+        }
+
+        Ok(())
+    }
+
+    async fn update_player_list(&mut self) -> ReqResult<()> {
+        let command = json!(["-", ["serverstatus", 0]]);
+        let res = self.query(command).await?;
+
+        let players = res.get_array("players_loop")
+            .expect("Could not extract value");
+        let player_list: Vec<LmsPlayer> = players
+            .iter()
+            .map(|p| {
+                from_str(&p.to_string()).unwrap()
+            })
+            .collect();
+
+        self.player_list.players = player_list.clone();
+        if player_list.is_empty() {
+            self.player_list.state.select(None);
+        }
+
+        Ok(())
+    }
+
+    async fn update_playlist_info(&mut self) -> ReqResult<()> {
         self.get_current_status().await?;
         self.get_current_playlist().await?;
         self.update_state();
@@ -36,28 +97,23 @@ impl App {
         Ok(())
     }
 
+    pub async fn select_player(&mut self) -> ReqResult<()> {
+        let list = &self.player_list.players;
+        if let Some(index) = self.player_list.state.selected() {
+            self.player = Some(list[index].clone());
+            self.update_playlist_info().await?;
+        }
+
+        Ok(())
+    }
+
+    pub fn change_state(&mut self, new_state: AppState) {
+        self.state = new_state;
+    }
+
     async fn query(&self, command: JsonValue) -> ReqResult<LmsResponse> {
         self.client.query(command).await?
             .json::<LmsResponse>().await
-    }
-
-    pub async fn get_player(&mut self) -> ReqResult<()> {
-        let command = json!(["-", ["serverstatus", 0]]);
-        let res = self.query(command).await?;
-
-        let players = res.get_array("players_loop")
-            .expect("Could not extract value");
-        let player: Option<LmsPlayer>;
-        if !players.is_empty() {
-            player = Some(
-                // For now, we just connect to the first player we find
-                from_str(&players[0].to_string()).unwrap());
-        } else {
-            player = None;
-        }
-
-        self.player = player;
-        Ok(())
     }
 
     pub fn get_current_playerid(&self) -> Option<String> {
@@ -178,6 +234,50 @@ impl App {
             }
         } else {
             self.playlist_state.select(None);
+        }
+    }
+
+    pub fn list_down(&mut self) {
+        if !self.player_list.is_empty() {
+            let i = match self.player_list.state.selected() {
+                Some(i) => {
+                    if i >= self.player_list.players.len() - 1 {
+                        0
+                    } else {
+                        i + 1
+                    }
+                },
+                None => 0,
+            };
+            self.player_list.state.select(Some(i));
+        }
+    }
+
+    pub fn list_up(&mut self) {
+        if !self.player_list.is_empty() {
+            let i = match self.player_list.state.selected() {
+                Some(i) => {
+                    if i == 0 {
+                        self.player_list.players.len() - 1
+                    } else {
+                        i - 1
+                    }
+                },
+                None => std::cmp::max(self.player_list.players.len() - 1, 0),
+            };
+            self.player_list.state.select(Some(i));
+        }
+    }
+
+    pub fn jump_to_list_top(&mut self) {
+        if let Some(_) = self.player_list.state.selected() {
+            self.player_list.state.select(Some(0));
+        }
+    }
+
+    pub fn jump_to_list_bottom(&mut self) {
+        if let Some(_) = self.player_list.state.selected() {
+            self.player_list.state.select(Some(self.player_list.players.len() - 1));
         }
     }
 }

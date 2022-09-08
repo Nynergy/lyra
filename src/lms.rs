@@ -101,7 +101,7 @@ impl LmsResponse {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct LmsPlayer {
     pub name: String,
     pub playerid: String,
