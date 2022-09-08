@@ -14,6 +14,7 @@ use tui::{
     text::{Span, Spans},
     widgets::{
         Block,
+        Clear,
         Gauge,
         List,
         ListItem,
@@ -100,6 +101,11 @@ impl Widget for CustomBorder {
 }
 
 pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+    if (f.size().height < 9) || (f.size().width < 20) {
+        f.render_widget(Clear, f.size());
+        return;
+    }
+
     match app.state {
         AppState::PlayerMenu => render_player_menu_state(f, app),
         AppState::Playlist => render_playlist_state(f, app),
@@ -110,20 +116,58 @@ fn render_player_menu_state<B: Backend>(
     f: &mut Frame<B>,
     app: &mut App
 ) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(
-            [
-            Constraint::Length(9),
-            Constraint::Length(1),
-            Constraint::Min(1),
-            Constraint::Length(1),
-            Constraint::Length(3),
-            ]
-            .as_ref()
-        )
-        .split(f.size());
+    if f.size().height > 15 {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                Constraint::Length(10),
+                Constraint::Min(3),
+                Constraint::Length(3),
+                ]
+                .as_ref()
+            )
+            .split(f.size());
 
+        render_banner(f, chunks[0]);
+
+        let list_area = centered_rect(40, 100, chunks[1]);
+
+        if app.player_list.is_empty() {
+            render_empty_list_info(f, list_area);
+        } else {
+            render_player_list(f, list_area, app);
+        }
+
+        render_player_menu_footer(f, chunks[2]);
+    } else {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                Constraint::Length(5),
+                Constraint::Min(3),
+                Constraint::Length(1),
+                ]
+                .as_ref()
+            )
+            .split(f.size());
+
+        render_tiny_banner(f, chunks[0]);
+
+        let list_area = centered_rect(40, 100, chunks[1]);
+
+        if app.player_list.is_empty() {
+            render_empty_list_info(f, list_area);
+        } else {
+            render_player_list(f, list_area, app);
+        }
+
+        render_empty_line(f, chunks[2]);
+    }
+}
+
+fn render_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
     let banner = raw_para!(
         "",
         "    __                ",
@@ -146,61 +190,91 @@ fn render_player_menu_state<B: Backend>(
         )
         .alignment(Alignment::Center);
 
-    f.render_widget(banner, chunks[0]);
+    f.render_widget(banner, chunk);
+}
 
-    let list_area = centered_rect(40, 100, chunks[2]);
+fn render_tiny_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+    let banner = raw_para!(
+        "",
+        "lyra",
+        "",
+        "An LMS Playlist Viewer for the Terminal",
+        ""
+    );
 
-    if app.player_list.is_empty() {
-        let mut commands = raw_para!(
-            "There are currently no connected players."
-        );
+    let banner = Paragraph::new(banner)
+        .block(Block::default())
+        .style(
+            Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD)
+        )
+        .alignment(Alignment::Center);
 
-        for _ in 0..chunks[2].height / 2 - 2 {
-            commands.insert(0, Spans::from(Span::raw("")));
-        }
+    f.render_widget(banner, chunk);
+}
 
-        let commands = Paragraph::new(commands)
-            .block(Block::default())
-            .style(
-                Style::default()
-                .add_modifier(Modifier::BOLD)
-            )
-            .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
+fn render_empty_list_info<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+    let mut info = raw_para!(
+        "There are currently no connected players."
+    );
 
-        f.render_widget(commands, chunks[2]);
-    } else {
-        let highlight = Style::default()
-            .add_modifier(Modifier::REVERSED);
-
-        let container = CustomBorder::new()
-            .title("Players".to_string());
-
-        f.render_widget(container, list_area);
-
-        let list_area = shrink_rect(list_area, 1);
-
-        let items: Vec<ListItem> = app.player_list
-            .players
-            .iter()
-            .map(|p| {
-                ListItem::new(
-                    Span::raw(p.name.clone())
-                )
-            })
-            .collect();
-
-        let list = List::new(items)
-            .block(Block::default())
-            .highlight_style(highlight);
-
-        f.render_stateful_widget(
-            list,
-            list_area,
-            &mut app.player_list.state
-        );
+    for _ in 0..chunk.height / 2 - 2 {
+        info.insert(0, Spans::from(Span::raw("")));
     }
 
+    let info = Paragraph::new(info)
+        .block(Block::default())
+        .style(
+            Style::default()
+            .add_modifier(Modifier::BOLD)
+        )
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(info, chunk);
+}
+
+fn render_player_list<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect,
+    app: &mut App
+) {
+    let highlight = Style::default()
+        .add_modifier(Modifier::REVERSED);
+
+    let container = CustomBorder::new()
+        .title("Players".to_string());
+
+    f.render_widget(container, chunk);
+
+    let list_area = shrink_rect(chunk, 1);
+
+    let items: Vec<ListItem> = app.player_list
+        .players
+        .iter()
+        .map(|p| {
+            ListItem::new(
+                Span::raw(p.name.clone())
+            )
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default())
+        .highlight_style(highlight);
+
+    f.render_stateful_widget(
+        list,
+        list_area,
+        &mut app.player_list.state
+    );
+}
+
+fn render_player_menu_footer<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect
+) {
     let info = raw_para!(
         "",
         "lyra v1.0.0 by Ben Buchanan (https://github.com/Nynergy)"
@@ -210,7 +284,7 @@ fn render_player_menu_state<B: Backend>(
         .block(Block::default())
         .alignment(Alignment::Center);
 
-    f.render_widget(info, chunks[4]);
+    f.render_widget(info, chunk);
 }
 
 fn render_playlist_state<B: Backend>(f: &mut Frame<B>, app: &mut App) {
@@ -510,41 +584,42 @@ fn render_now_playing_info_left<B: Backend>(
     status: &LmsStatus,
     current_track: LmsSong
 ) {
-    let mut now_playing: String;
+    if chunk.width > 33 {
+        let mut now_playing: String;
 
-    if status.total_tracks != 0 {
-        now_playing = format!(
-            "Now Playing: {} - {}",
-            current_track.title,
-            current_track.artist
-        );
-    } else {
-        now_playing = "Now Playing: N/A".to_string();
+        if status.total_tracks != 0 {
+            now_playing = format!(
+                "{} - {}",
+                current_track.title,
+                current_track.artist
+            );
+        } else {
+            now_playing = "N/A".to_string();
+        }
+
+        let max_length = chunk.width as usize - 33;
+        let width_in_unicode = now_playing.chars()
+            .map(|c| {
+                if c.is_ascii() { 1 } else { 2 }
+            })
+            .sum::<usize>();
+        if width_in_unicode > max_length {
+            let (now_playing_str, _) = now_playing.unicode_truncate(max_length);
+            now_playing = format!("{}...", now_playing_str);
+        }
+        let left = Spans::from(vec![
+            Span::styled(
+                format!("Now Playing: "),
+                Style::default().add_modifier(Modifier::BOLD)
+            ),
+            Span::raw(now_playing),
+        ]);
+
+        let left = Paragraph::new(left)
+            .block(Block::default());
+
+        f.render_widget(left, chunk);
     }
-
-    let max_length = chunk.width as usize - 20;
-    let width_in_unicode = now_playing.chars()
-        .map(|c| {
-            if c.is_ascii() { 1 } else { 2 }
-        })
-        .sum::<usize>();
-    if width_in_unicode > max_length {
-        let (now_playing_str, _) = now_playing.unicode_truncate(max_length);
-        now_playing = format!("{}...", now_playing_str);
-    }
-    let now_playing: Vec<&str> = now_playing.split(":").collect();
-    let left = Spans::from(vec![
-        Span::styled(
-            format!("{}:", now_playing[0]),
-            Style::default().add_modifier(Modifier::BOLD)
-        ),
-        Span::raw(now_playing[1]),
-    ]);
-
-    let left = Paragraph::new(left)
-        .block(Block::default());
-
-    f.render_widget(left, chunk);
 }
 
 fn render_now_playing_info_right<B: Backend>(
@@ -568,6 +643,14 @@ fn render_now_playing_info_right<B: Backend>(
         .alignment(Alignment::Right);
 
     f.render_widget(right, chunk);
+}
+
+fn render_empty_line<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+    let line = raw_para!("");
+    let line = Paragraph::new(line)
+        .block(Block::default());
+
+    f.render_widget(line, chunk);
 }
 
 fn format_time(duration: f64, full_width: bool) -> String {
