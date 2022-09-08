@@ -1,8 +1,13 @@
+use core::time::Duration;
+use std::fmt;
 use serde::Deserialize;
+use serde_json::json;
 use std::{
     collections::HashMap,
     net,
 };
+
+type JsonValue = serde_json::Value;
 
 pub struct LmsClient {
     client: reqwest::Client,
@@ -13,7 +18,7 @@ impl LmsClient {
     pub fn from(socket_str: String) -> Self {
         Self {
             client: reqwest::Client::builder()
-                .timeout(core::time::Duration::from_millis(3000))
+                .timeout(Duration::from_millis(3000))
                 .build()
                 .expect("Could not build reqwest client"),
             socket: socket_str.parse()
@@ -23,27 +28,24 @@ impl LmsClient {
 
     pub async fn query(
         &self,
-        command: serde_json::Value
+        command: JsonValue
     ) -> Result<reqwest::Response, reqwest::Error> {
-        let res = self.client
+        self.client
             .post(format!(
                 "http://{}/jsonrpc.js",
                 self.socket.to_string()
             ))
-            .json(&serde_json::json!({
+            .json(&json!({
                 "method": "slim.request",
                 "params": command
             }))
-            .send()
-            .await?;
-
-        Ok(res)
+            .send().await
     }
 }
 
 #[derive(Debug, Deserialize)]
 pub struct LmsResponse {
-    result: HashMap::<String, serde_json::Value>,
+    result: HashMap::<String, JsonValue>,
 }
 
 impl LmsResponse {
@@ -86,7 +88,7 @@ impl LmsResponse {
     pub fn get_array(
         &self,
         key: &str
-    ) -> Result<&Vec<serde_json::Value>, String> {
+    ) -> Result<&Vec<JsonValue>, String> {
         if let Some(value) = self.result.get(key) {
             if value.is_array() {
                 Ok(value.as_array().unwrap())
@@ -112,6 +114,27 @@ pub enum PlaylistMode {
     PAUSE,
 }
 
+impl PlaylistMode {
+    pub fn from(text: &str) -> Self {
+        match text {
+            "play" => PlaylistMode::PLAY,
+            "stop" => PlaylistMode::STOP,
+            "pause" => PlaylistMode::PAUSE,
+            _ => unreachable!()
+        }
+    }
+}
+
+impl fmt::Display for PlaylistMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            PlaylistMode::STOP => write!(f, "STOPPED"),
+            PlaylistMode::PLAY => write!(f, "PLAYING"),
+            PlaylistMode::PAUSE => write!(f, "PAUSED"),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum RepeatMode {
     NONE,
@@ -119,11 +142,51 @@ pub enum RepeatMode {
     PLAYLIST,
 }
 
+impl RepeatMode {
+    pub fn from(num: u64) -> Self {
+        match num {
+            1 => RepeatMode::TRACK,
+            2 => RepeatMode::PLAYLIST,
+            _ => RepeatMode::NONE,
+        }
+    }
+}
+
+impl fmt::Display for RepeatMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RepeatMode::NONE => write!(f, "-"),
+            RepeatMode::TRACK => write!(f, "r"),
+            RepeatMode::PLAYLIST => write!(f, "R"),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum ShuffleMode {
     NONE,
     TRACK,
     ALBUM,
+}
+
+impl ShuffleMode {
+    pub fn from(num: u64) -> Self {
+        match num {
+            1 => ShuffleMode::TRACK,
+            2 => ShuffleMode::ALBUM,
+            _ => ShuffleMode::NONE,
+        }
+    }
+}
+
+impl fmt::Display for ShuffleMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ShuffleMode::NONE => write!(f, "-"),
+            ShuffleMode::TRACK => write!(f, "z"),
+            ShuffleMode::ALBUM => write!(f, "Z"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
