@@ -1,5 +1,8 @@
 use std::{
+    env,
     error::Error,
+    fs,
+    path::PathBuf,
     time::{Duration, Instant},
 };
 use tui::{
@@ -30,9 +33,10 @@ async fn main() -> DynResult<()> {
     let mut terminal = init_terminal()?;
     terminal.clear()?;
 
-    let tick_rate = Duration::from_millis(1000);
-    let config = Config::default();
+    let config = load_config()?;
     let app = App::from(config);
+
+    let tick_rate = Duration::from_millis(1000);
     let res = run_app(&mut terminal, app, tick_rate).await;
 
     terminal.show_cursor()?;
@@ -43,6 +47,28 @@ async fn main() -> DynResult<()> {
     }
 
     Ok(())
+}
+
+fn load_config() -> DynResult<Config> {
+    let user_home = env::var("HOME");
+    let user_home = user_home.unwrap_or("/".to_string());
+    let path = PathBuf::from(&user_home);
+    let path = path.join(".lyra");
+    if !path.exists() {
+        fs::create_dir(&path)?;
+    }
+    env::set_current_dir(&path)?;
+
+    let config: Config;
+    let config_path = path.join("config.json");
+    if let Ok(config_data) = fs::read_to_string(&config_path) {
+        config = serde_json::from_str(&config_data)
+            .unwrap_or(Config::default());
+    } else {
+        config = Config::default();
+    }
+
+    Ok(config)
 }
 
 async fn run_app<B: Backend>(

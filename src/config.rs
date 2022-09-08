@@ -1,5 +1,7 @@
+use serde::Deserialize;
 use std::collections::HashMap;
 
+#[derive(Debug, Deserialize)]
 pub struct Config {
     pub lms_ip: String,
     pub lms_port: String,
@@ -24,8 +26,7 @@ impl Config {
         colors.insert("PlaybarGauge".to_string(), 2);
 
         Self {
-            // TODO: Change IP to localhost
-            lms_ip: "192.168.0.188".to_string(),
+            lms_ip: "127.0.0.1".to_string(),
             lms_port: "9000".to_string(),
             colors,
         }
