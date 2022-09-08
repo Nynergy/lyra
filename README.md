@@ -34,18 +34,18 @@ players, if any are connected to the LMS you provided in the configuration file
 Once you select a player from the list, _lyra_ will continuously query against
 the server for information regarding the player and its internal playlist. This
 information is presented to you in a simple and colorful playlist view, with
-player info at the top and progress info at the bottom.
+player info at the top and progress info at the bottom. The currently playing
+track will always be highlighted and visible in the playlist section.
 
 Depending on the size of the terminal, some columns may be omitted from the
 playlist section. For example, the track titles, indices, and durations are
 always visible, but the artist and album may disappear as you shrink the
-terminal. This is to keep things from getting too cluttered/truncated.
+terminal. This is to keep things from getting too cluttered/truncated. Various
+other information from the header and footer may also be changed/omitted in a
+similar way.
 
-Various other information from the header and footer may also be changed/omitted
-in a similar way.
-
-Hit 'p' while in the playlist view to return back to the player menu view. Hit
-'q' at any time in any view to quit _lyra_.
+Hit <kbd>p</kbd> while in the playlist view to return back to the player menu.
+Hit <kbd>q</kbd> at any time in any view to quit _lyra_.
 
 It's very simple in terms of controls because it is not a **controller**, nor a
 **player**, but simply a **viewer**.
@@ -100,9 +100,9 @@ The config file ***must*** contain, at a minimum:
 ```
 
 In your case, you would specify the IP and port that your LMS is running on,
-rather than the exact ones I have used above. If you want to configure any
-colors to something other than the default ones, you can add any/all of the
-following to your config:
+rather than the exact ones I have used above. If you want to set any colors to
+something other than the default ones, you can add any/all of the following to
+your config:
 
 ```json
 {
