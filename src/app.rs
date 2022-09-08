@@ -1,6 +1,7 @@
 use serde_json::{from_str, json};
 use tui::widgets::ListState;
 
+use crate::config::*;
 use crate::lms::*;
 
 type ReqResult<T> = Result<T, reqwest::Error>;
@@ -41,11 +42,14 @@ pub struct App {
     pub status: Option<LmsStatus>,
     pub playlist_state: ListState,
     pub player_list: PlayerList,
+    pub config: Config,
 }
 
 impl App {
-    pub fn from(server_str: String) -> Self {
-        let client = LmsClient::from(server_str);
+    pub fn from(config: Config) -> Self {
+        let client = LmsClient::from(
+            format!("{}:{}", config.lms_ip, config.lms_port)
+        );
 
         Self {
             client,
@@ -56,6 +60,7 @@ impl App {
             status: None,
             playlist_state: ListState::default(),
             player_list: PlayerList::default(),
+            config
         }
     }
 

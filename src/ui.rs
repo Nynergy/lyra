@@ -129,7 +129,7 @@ fn render_player_menu_state<B: Backend>(
             )
             .split(f.size());
 
-        render_banner(f, chunks[0]);
+        render_banner(f, chunks[0], app);
 
         let list_area = centered_rect(40, 100, chunks[1]);
 
@@ -153,7 +153,7 @@ fn render_player_menu_state<B: Backend>(
             )
             .split(f.size());
 
-        render_tiny_banner(f, chunks[0]);
+        render_tiny_banner(f, chunks[0], app);
 
         let list_area = centered_rect(40, 100, chunks[1]);
 
@@ -167,7 +167,11 @@ fn render_player_menu_state<B: Backend>(
     }
 }
 
-fn render_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+fn render_banner<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect,
+    app: &App
+) {
     let banner = raw_para!(
         "",
         "    __                ",
@@ -185,7 +189,7 @@ fn render_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         .block(Block::default())
         .style(
             Style::default()
-            .fg(Color::Green)
+            .fg(Color::Indexed(*app.config.color("Banner")))
             .add_modifier(Modifier::BOLD)
         )
         .alignment(Alignment::Center);
@@ -193,7 +197,11 @@ fn render_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
     f.render_widget(banner, chunk);
 }
 
-fn render_tiny_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+fn render_tiny_banner<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect,
+    app: &App
+) {
     let banner = raw_para!(
         "",
         "lyra",
@@ -206,7 +214,7 @@ fn render_tiny_banner<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         .block(Block::default())
         .style(
             Style::default()
-            .fg(Color::Green)
+            .fg(Color::Indexed(*app.config.color("Banner")))
             .add_modifier(Modifier::BOLD)
         )
         .alignment(Alignment::Center);
@@ -311,9 +319,9 @@ fn render_status_header<B: Backend>(
     app: &mut App
 ) {
     if let Some(status) = &app.status {
-        render_status_info_left(f, chunk, status);
+        render_status_info_left(f, chunk, status, app);
         render_status_info_center(f, chunk, status, app);
-        render_status_info_right(f, chunk, status);
+        render_status_info_right(f, chunk, status, app);
         render_status_bar(f, chunk);
     }
 }
@@ -321,7 +329,8 @@ fn render_status_header<B: Backend>(
 fn render_status_info_left<B: Backend>(
     f: &mut Frame<B>,
     chunk: Rect,
-    status: &LmsStatus
+    status: &LmsStatus,
+    app: &App
 ) {
     let left = Spans::from(vec![
         Span::styled(
@@ -330,7 +339,8 @@ fn render_status_info_left<B: Backend>(
         ),
         Span::styled(
             &status.player_name,
-            Style::default().fg(Color::Red)
+            Style::default()
+            .fg(Color::Indexed(*app.config.color("PlayerName")))
         ),
     ]);
 
@@ -379,20 +389,24 @@ fn render_status_info_center<B: Backend>(
 fn render_status_info_right<B: Backend>(
     f: &mut Frame<B>,
     chunk: Rect,
-    status: &LmsStatus
+    status: &LmsStatus,
+    app: &App
 ) {
     let mode_color = match status.playlist_mode {
-        PlaylistMode::STOP => Color::Red,
-        PlaylistMode::PLAY => Color::Green,
-        PlaylistMode::PAUSE => Color::Yellow,
+        PlaylistMode::STOP =>
+            Color::Indexed(*app.config.color("StoppedIndicator")),
+        PlaylistMode::PLAY =>
+            Color::Indexed(*app.config.color("PlayingIndicator")),
+        PlaylistMode::PAUSE =>
+            Color::Indexed(*app.config.color("PausedIndicator")),
     };
     let repeat_color = match status.playlist_repeat {
         RepeatMode::NONE => Color::White,
-        _ => Color::Magenta,
+        _ => Color::Indexed(*app.config.color("RepeatIndicator")),
     };
     let shuffle_color = match status.playlist_shuffle {
         ShuffleMode::NONE => Color::White,
-        _ => Color::Cyan,
+        _ => Color::Indexed(*app.config.color("ShuffleIndicator")),
     };
 
     let right = Spans::from(vec![
@@ -454,7 +468,7 @@ fn render_playlist<B: Backend>(
             .tracks
             .iter()
             .map(|i| {
-                ListItem::new(track_span(i, chunk.width))
+                ListItem::new(track_span(i, chunk.width, app))
             })
             .collect();
 
@@ -513,7 +527,8 @@ fn render_playbar_footer<B: Backend>(
                 f,
                 chunks[1],
                 current_track.clone(),
-                elapsed
+                elapsed,
+                app
             );
 
             render_now_playing_info(
@@ -531,7 +546,8 @@ fn render_playbar_gauge<B: Backend>(
     f: &mut Frame<B>,
     chunk: Rect,
     current_track: LmsSong,
-    elapsed: f64
+    elapsed: f64,
+    app: &App
 ) {
     let playbar_chunk = Layout::default()
         .direction(Direction::Horizontal)
@@ -549,7 +565,7 @@ fn render_playbar_gauge<B: Backend>(
         .block(Block::default())
         .gauge_style(
             Style::default()
-            .fg(Color::Green)
+            .fg(Color::Indexed(*app.config.color("PlaybarGauge")))
         )
         .ratio(elapsed / current_track.duration)
         .label("");
@@ -685,7 +701,11 @@ fn construct_bar(length: u16) -> String {
         bar
 }
 
-fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
+fn track_span<'a>(
+    track: &'a LmsSong,
+    width: u16,
+    app: &App
+) -> Spans<'a> {
     let index = format!("{:2}", track.index + 1);
     let index_spaces = " ";
     let mut current_width = index.len() + index_spaces.len();
@@ -735,23 +755,28 @@ fn track_span<'a>(track: &'a LmsSong, width: u16) -> Spans<'a> {
     Spans::from(vec![
         Span::styled(
             format!("{}{}", index, index_spaces),
-            Style::default().fg(Color::Magenta)
+            Style::default()
+            .fg(Color::Indexed(*app.config.color("TrackIndex")))
         ),
         Span::styled(
             format!("{}{}", title, title_spaces),
-            Style::default().fg(Color::Yellow)
+            Style::default()
+            .fg(Color::Indexed(*app.config.color("TrackTitle")))
         ),
         Span::styled(
             format!("{}{}", artist, artist_spaces),
-            Style::default().fg(Color::Blue)
+            Style::default()
+            .fg(Color::Indexed(*app.config.color("TrackArtist")))
         ),
         Span::styled(
             format!("{}{}", album, album_spaces),
-            Style::default().fg(Color::Red)
+            Style::default()
+            .fg(Color::Indexed(*app.config.color("TrackAlbum")))
         ),
         Span::styled(
             duration,
-            Style::default().fg(Color::Cyan)
+            Style::default()
+            .fg(Color::Indexed(*app.config.color("TrackDuration")))
         ),
     ])
 }
