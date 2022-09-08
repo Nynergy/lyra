@@ -320,7 +320,9 @@ fn render_status_header<B: Backend>(
 ) {
     if let Some(status) = &app.status {
         render_status_info_left(f, chunk, status, app);
-        render_status_info_center(f, chunk, status, app);
+        if f.size().width > 50 {
+            render_status_info_center(f, chunk, status, app);
+        }
         render_status_info_right(f, chunk, status, app);
         render_status_bar(f, chunk);
     }
