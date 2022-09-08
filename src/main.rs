@@ -63,7 +63,7 @@ fn load_config() -> DynResult<Config> {
     let config_path = path.join("config.json");
     if let Ok(config_data) = fs::read_to_string(&config_path) {
         config = serde_json::from_str(&config_data)
-            .unwrap_or(Config::default());
+            .expect("Malformed config file");
     } else {
         config = Config::default();
     }
