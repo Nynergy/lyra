@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
-use tui::{
+use ratatui::{
     backend::{Backend},
     Terminal,
 };

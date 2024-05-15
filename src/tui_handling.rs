@@ -15,7 +15,7 @@ use crossterm::{
     },
 };
 use std::io;
-use tui::{
+use ratatui::{
     backend::CrosstermBackend,
     Terminal,
 };

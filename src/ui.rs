@@ -1,5 +1,4 @@
-use tui::{
-    backend::Backend,
+use ratatui::{
     buffer::Buffer,
     layout::{
         Alignment,
@@ -11,7 +10,7 @@ use tui::{
     },
     style::{Color, Modifier, Style},
     symbols::line,
-    text::{Span, Spans},
+    text::{Line, Span},
     widgets::{
         Block,
         Clear,
@@ -35,7 +34,7 @@ macro_rules! raw_para {
             let mut temp_para = Vec::new();
             $(
                 temp_para.push(
-                    Spans::from(
+                    Line::from(
                         Span::raw($x)
                     )
                 );
@@ -100,7 +99,7 @@ impl Widget for CustomBorder {
     }
 }
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+pub fn ui(f: &mut Frame, app: &mut App) {
     if (f.size().height < 9) || (f.size().width < 20) {
         f.render_widget(Clear, f.size());
         return;
@@ -112,8 +111,8 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     }
 }
 
-fn render_player_menu_state<B: Backend>(
-    f: &mut Frame<B>,
+fn render_player_menu_state(
+    f: &mut Frame,
     app: &mut App
 ) {
     if f.size().height > 15 {
@@ -167,8 +166,8 @@ fn render_player_menu_state<B: Backend>(
     }
 }
 
-fn render_banner<B: Backend>(
-    f: &mut Frame<B>,
+fn render_banner(
+    f: &mut Frame,
     chunk: Rect,
     app: &App
 ) {
@@ -197,8 +196,8 @@ fn render_banner<B: Backend>(
     f.render_widget(banner, chunk);
 }
 
-fn render_tiny_banner<B: Backend>(
-    f: &mut Frame<B>,
+fn render_tiny_banner(
+    f: &mut Frame,
     chunk: Rect,
     app: &App
 ) {
@@ -222,13 +221,13 @@ fn render_tiny_banner<B: Backend>(
     f.render_widget(banner, chunk);
 }
 
-fn render_empty_list_info<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+fn render_empty_list_info(f: &mut Frame, chunk: Rect) {
     let mut info = raw_para!(
         "There are currently no connected players."
     );
 
     for _ in 0..chunk.height / 2 - 2 {
-        info.insert(0, Spans::from(Span::raw("")));
+        info.insert(0, Line::from(Span::raw("")));
     }
 
     let info = Paragraph::new(info)
@@ -243,8 +242,8 @@ fn render_empty_list_info<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
     f.render_widget(info, chunk);
 }
 
-fn render_player_list<B: Backend>(
-    f: &mut Frame<B>,
+fn render_player_list(
+    f: &mut Frame,
     chunk: Rect,
     app: &mut App
 ) {
@@ -279,8 +278,8 @@ fn render_player_list<B: Backend>(
     );
 }
 
-fn render_player_menu_footer<B: Backend>(
-    f: &mut Frame<B>,
+fn render_player_menu_footer(
+    f: &mut Frame,
     chunk: Rect
 ) {
     let info = raw_para!(
@@ -295,7 +294,7 @@ fn render_player_menu_footer<B: Backend>(
     f.render_widget(info, chunk);
 }
 
-fn render_playlist_state<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+fn render_playlist_state(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -313,8 +312,8 @@ fn render_playlist_state<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     render_playbar_footer(f, chunks[2], app);
 }
 
-fn render_status_header<B: Backend>(
-    f: &mut Frame<B>,
+fn render_status_header(
+    f: &mut Frame,
     chunk: Rect,
     app: &mut App
 ) {
@@ -328,13 +327,13 @@ fn render_status_header<B: Backend>(
     }
 }
 
-fn render_status_info_left<B: Backend>(
-    f: &mut Frame<B>,
+fn render_status_info_left(
+    f: &mut Frame,
     chunk: Rect,
     status: &LmsStatus,
     app: &App
 ) {
-    let left = Spans::from(vec![
+    let left = Line::from(vec![
         Span::styled(
             "Player: ",
             Style::default().add_modifier(Modifier::BOLD)
@@ -352,8 +351,8 @@ fn render_status_info_left<B: Backend>(
     f.render_widget(left, chunk);
 }
 
-fn render_status_info_center<B: Backend>(
-    f: &mut Frame<B>,
+fn render_status_info_center(
+    f: &mut Frame,
     chunk: Rect,
     status: &LmsStatus,
     app: &App
@@ -369,7 +368,7 @@ fn render_status_info_center<B: Backend>(
     }
     let playlist_duration = format_time(playlist_duration, false);
 
-    let center = Spans::from(vec![
+    let center = Line::from(vec![
         Span::styled(
             num_tracks,
             Style::default().add_modifier(Modifier::BOLD)
@@ -388,8 +387,8 @@ fn render_status_info_center<B: Backend>(
     f.render_widget(center, chunk);
 }
 
-fn render_status_info_right<B: Backend>(
-    f: &mut Frame<B>,
+fn render_status_info_right(
+    f: &mut Frame,
     chunk: Rect,
     status: &LmsStatus,
     app: &App
@@ -411,7 +410,7 @@ fn render_status_info_right<B: Backend>(
         _ => Color::Indexed(*app.config.color("ShuffleIndicator")),
     };
 
-    let right = Spans::from(vec![
+    let right = Line::from(vec![
         Span::styled(
             status.playlist_mode.to_string(),
             Style::default()
@@ -441,15 +440,15 @@ fn render_status_info_right<B: Backend>(
     f.render_widget(right, chunk);
 }
 
-fn render_status_bar<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+fn render_status_bar(f: &mut Frame, chunk: Rect) {
     let bar = construct_bar(chunk.width);
 
     let bar = vec![
         // Empty line for status info
-        Spans::from(vec![
+        Line::from(vec![
             Span::raw(""),
         ]),
-        Spans::from(vec![
+        Line::from(vec![
             Span::raw(bar),
         ]),
     ];
@@ -460,8 +459,8 @@ fn render_status_bar<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
     f.render_widget(bar, chunk);
 }
 
-fn render_playlist<B: Backend>(
-    f: &mut Frame<B>,
+fn render_playlist(
+    f: &mut Frame,
     chunk: Rect,
     app: &mut App
 ) {
@@ -485,8 +484,8 @@ fn render_playlist<B: Backend>(
     }
 }
 
-fn render_playbar_footer<B: Backend>(
-    f: &mut Frame<B>,
+fn render_playbar_footer(
+    f: &mut Frame,
     chunk: Rect,
     app: &App
 ) {
@@ -506,7 +505,7 @@ fn render_playbar_footer<B: Backend>(
                 .split(chunk);
 
             let bar = construct_bar(chunks[2].width);
-            let bar = Spans::from(vec![
+            let bar = Line::from(vec![
                 Span::raw(bar),
             ]);
             let bar = Paragraph::new(bar)
@@ -544,8 +543,8 @@ fn render_playbar_footer<B: Backend>(
     }
 }
 
-fn render_playbar_gauge<B: Backend>(
-    f: &mut Frame<B>,
+fn render_playbar_gauge(
+    f: &mut Frame,
     chunk: Rect,
     current_track: LmsSong,
     elapsed: f64,
@@ -575,8 +574,8 @@ fn render_playbar_gauge<B: Backend>(
     f.render_widget(playbar, playbar_chunk);
 }
 
-fn render_now_playing_info<B: Backend>(
-    f: &mut Frame<B>,
+fn render_now_playing_info(
+    f: &mut Frame,
     chunk: Rect,
     status: &LmsStatus,
     current_track: LmsSong,
@@ -596,8 +595,8 @@ fn render_now_playing_info<B: Backend>(
     );
 }
 
-fn render_now_playing_info_left<B: Backend>(
-    f: &mut Frame<B>,
+fn render_now_playing_info_left(
+    f: &mut Frame,
     chunk: Rect,
     status: &LmsStatus,
     current_track: LmsSong
@@ -625,7 +624,7 @@ fn render_now_playing_info_left<B: Backend>(
             let (now_playing_str, _) = now_playing.unicode_truncate(max_length);
             now_playing = format!("{}...", now_playing_str);
         }
-        let left = Spans::from(vec![
+        let left = Line::from(vec![
             Span::styled(
                 format!("Now Playing: "),
                 Style::default().add_modifier(Modifier::BOLD)
@@ -640,15 +639,15 @@ fn render_now_playing_info_left<B: Backend>(
     }
 }
 
-fn render_now_playing_info_right<B: Backend>(
-    f: &mut Frame<B>,
+fn render_now_playing_info_right(
+    f: &mut Frame,
     chunk: Rect,
     current_track: LmsSong,
     elapsed: f64
 ) {
     let elapsed = format_time(elapsed, false);
     let duration = format_time(current_track.duration, false);
-    let right = Spans::from(vec![
+    let right = Line::from(vec![
         Span::raw("("),
         Span::raw(elapsed),
         Span::raw("/"),
@@ -663,7 +662,7 @@ fn render_now_playing_info_right<B: Backend>(
     f.render_widget(right, chunk);
 }
 
-fn render_empty_line<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+fn render_empty_line(f: &mut Frame, chunk: Rect) {
     let line = raw_para!("");
     let line = Paragraph::new(line)
         .block(Block::default());
@@ -707,7 +706,7 @@ fn track_span<'a>(
     track: &'a LmsSong,
     width: u16,
     app: &App
-) -> Spans<'a> {
+) -> Line<'a> {
     let index = format!("{:2}", track.index + 1);
     let index_spaces = " ";
     let mut current_width = index.len() + index_spaces.len();
@@ -754,7 +753,7 @@ fn track_span<'a>(
             current_width
         );
 
-    Spans::from(vec![
+    Line::from(vec![
         Span::styled(
             format!("{}{}", index, index_spaces),
             Style::default()

@@ -1,5 +1,5 @@
 use serde_json::{from_str, json};
-use tui::widgets::ListState;
+use ratatui::widgets::ListState;
 
 use crate::config::*;
 use crate::lms::*;
